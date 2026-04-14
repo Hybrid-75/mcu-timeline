@@ -78,9 +78,9 @@ const formatReleaseMonth = (dateString) => {
 const tmdbCache = {};
 const activeFetches = {};
 
-// --- CUSTOM HOOK: 2-Step TMDB Fetch (Poster & Logo) ---
+// --- CUSTOM HOOK: 3-Step TMDB Fetch (Poster, Logo, Trailer) ---
 const useTMDBAssets = (title, type, id = 0) => {
-  const [assets, setAssets] = useState(tmdbCache[title] || { posterUrl: null, logoUrl: null });
+  const [assets, setAssets] = useState(tmdbCache[title] || { posterUrl: null, logoUrl: null, trailerUrl: null });
 
   useEffect(() => {
     if (!title) return;
@@ -103,7 +103,7 @@ const useTMDBAssets = (title, type, id = 0) => {
       const fallbackPoster = `https://placehold.co/300x450/1e293b/a855f7?text=${encodeURIComponent(shortTitle)}`;
 
       if (!apiKey) {
-        setAssets({ posterUrl: fallbackPoster, logoUrl: null });
+        setAssets({ posterUrl: fallbackPoster, logoUrl: null, trailerUrl: null });
         return;
       }
 
@@ -122,24 +122,32 @@ const useTMDBAssets = (title, type, id = 0) => {
             const poster = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : fallbackPoster;
             const tmdbId = result.id;
 
-            const imagesUrl = `https://api.themoviedb.org/3/${searchType}/${tmdbId}/images?api_key=${apiKey}`;
-            const imagesRes = await fetch(imagesUrl);
-            const imagesData = await imagesRes.json();
+            const detailUrl = `https://api.themoviedb.org/3/${searchType}/${tmdbId}?api_key=${apiKey}&append_to_response=images,videos&include_image_language=en,null`;
+            const detailRes = await fetch(detailUrl);
+            const detailData = await detailRes.json();
 
             let logo = null;
-            if (imagesData.logos && imagesData.logos.length > 0) {
-              const enLogo = imagesData.logos.find(l => l.iso_639_1 === 'en');
-              const selectedLogo = enLogo || imagesData.logos[0];
+            if (detailData.images && detailData.images.logos && detailData.images.logos.length > 0) {
+              const enLogo = detailData.images.logos.find(l => l.iso_639_1 === 'en');
+              const selectedLogo = enLogo || detailData.images.logos[0];
               logo = `https://image.tmdb.org/t/p/w500${selectedLogo.file_path}`;
             }
 
-            return { posterUrl: poster, logoUrl: logo };
+            let trailer = null;
+            if (detailData.videos && detailData.videos.results && detailData.videos.results.length > 0) {
+              const foundTrailer = detailData.videos.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+              if (foundTrailer) {
+                trailer = `https://www.youtube.com/watch?v=${foundTrailer.key}`;
+              }
+            }
+
+            return { posterUrl: poster, logoUrl: logo, trailerUrl: trailer };
           } else {
-            return { posterUrl: fallbackPoster, logoUrl: null };
+            return { posterUrl: fallbackPoster, logoUrl: null, trailerUrl: null };
           }
         } catch (error) {
           console.error("TMDB Fetch Failed:", error);
-          return { posterUrl: fallbackPoster, logoUrl: null };
+          return { posterUrl: fallbackPoster, logoUrl: null, trailerUrl: null };
         }
       })();
 
@@ -160,21 +168,26 @@ const useTMDBAssets = (title, type, id = 0) => {
 
 const MCUTitleLogo = () => {
   return (
-    <img 
-      src="https://image.tmdb.org/t/p/w500/vqzGbggcpmTWE31RSGgwLpaFjb0.png" 
-      alt="MCU Timeline" 
-      className="h-10 md:h-14 object-contain filter brightness-110 drop-shadow-[0_0_10px_rgba(255,255,255,0.4)]"
-      onError={(e) => {
-        e.target.style.display = 'none';
-        e.target.nextSibling.style.display = 'block';
-      }}
-    />
+    // Uses the highly reliable Marvel Studios SVG to prevent hotlink blocking
+    <div>
+      <img 
+        src="https://upload.wikimedia.org/wikipedia/commons/1/10/Marvel_Studios_2016_logo.svg" 
+        alt="Marvel Studios" 
+        className="h-8 md:h-12 object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
+        onError={(e) => {
+          e.target.style.display = 'none';
+          e.target.nextSibling.style.display = 'block';
+        }}
+      />
+      <h1 className="hidden text-3xl md:text-5xl font-black text-white leading-none tracking-tighter shrink-0 select-none">
+        MCU <span className="text-transparent font-normal text-3xl md:text-5xl bg-clip-text bg-gradient-to-r from-red-600 via-orange-400 to-red-600">TIMELINE</span>
+      </h1>
+    </div>
   );
 };
 
-
 const ItemModal = ({ item, onClose }) => {
-  const { posterUrl } = useTMDBAssets(item?.title, item?.type, item?.id);
+  const { posterUrl, logoUrl, trailerUrl } = useTMDBAssets(item?.title, item?.type, item?.id);
 
   useEffect(() => {
     if (item) document.body.style.overflow = 'hidden';
@@ -201,28 +214,41 @@ const ItemModal = ({ item, onClose }) => {
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors z-20">✕</button>
         
         <div className="relative z-10 flex flex-col md:flex-row w-full p-6 md:p-8 gap-8 overflow-y-auto">
-          <div className="w-full md:w-1/3 shrink-0">
+          <div className="w-full md:w-1/3 shrink-0 flex flex-col gap-4">
             {posterUrl ? (
               <img src={posterUrl} alt={item.title} className="w-full h-auto rounded-xl shadow-2xl border border-slate-700/50 object-cover aspect-[2/3]" />
             ) : (
               <div className="w-full rounded-xl shadow-2xl border border-slate-700/50 bg-slate-800 animate-pulse aspect-[2/3]"></div>
             )}
+            
+            {trailerUrl && (
+              <a href={trailerUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(220,38,38,0.4)] hover:shadow-[0_0_20px_rgba(220,38,38,0.6)]">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                Watch Trailer
+              </a>
+            )}
           </div>
           <div className="w-full md:w-2/3 flex flex-col">
             <div className="mb-6">
-              <div className="flex flex-wrap gap-2 mb-3">
+              <div className="flex flex-wrap gap-2 mb-4">
                 <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${item.type === 'Movie' ? 'bg-cyan-900/60 text-cyan-400' : 'bg-emerald-900/60 text-emerald-400'}`}>{item.type}</span>
                 <span className="text-xs font-bold px-2 py-1 rounded bg-slate-800/80 text-slate-300 uppercase tracking-wider border border-slate-700">Phase {item.phase}</span>
                 {item.isCore && <span className="text-xs font-bold px-2 py-1 rounded bg-purple-900/60 text-purple-400 uppercase tracking-wider border border-purple-500/30">Core Story</span>}
               </div>
-              <h2 className="text-3xl md:text-5xl font-black text-white mb-2 leading-tight drop-shadow-lg">{item.title}</h2>
+              
+              {logoUrl ? (
+                <img src={logoUrl} alt={item.title} className="max-h-20 md:max-h-24 object-contain object-left mb-2 drop-shadow-lg" />
+              ) : (
+                <h2 className="text-3xl md:text-5xl font-black text-white mb-2 leading-tight drop-shadow-lg">{item.title}</h2>
+              )}
+              
               <p className="text-lg text-slate-300 font-medium">{item.saga}</p>
             </div>
             <div className="space-y-6">
               <div className="bg-slate-950/60 backdrop-blur-sm rounded-xl p-5 border border-slate-800/50">
                 <h3 className="text-sm uppercase tracking-widest font-bold text-slate-400 mb-2">Fictional Synopsis</h3>
                 <p className="text-slate-200 leading-relaxed">
-                  In this pivotal installment of the {item.saga}, the events of <strong>{item.title}</strong> shape the future of the Marvel Cinematic Universe. Set predominantly in the year {item.chronoYear}, this {item.type.toLowerCase()} pushes the boundaries of Phase {item.phase} and leaves lasting consequences for our heroes as they face new threats across the timeline.
+                  Experience the events of <strong>{item.title}</strong> as they unfold within the {item.saga}. Set predominantly in the year {item.chronoYear}, this {item.type.toLowerCase()} pushes the boundaries of Phase {item.phase} and leaves lasting consequences across the timeline.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -244,7 +270,7 @@ const ItemModal = ({ item, onClose }) => {
 };
 
 const TimelineCardStandard = ({ item, onClick }) => {
-  const { posterUrl } = useTMDBAssets(item.title, item.type, item.id);
+  const { posterUrl, logoUrl } = useTMDBAssets(item.title, item.type, item.id);
 
   return (
     <div 
@@ -276,7 +302,13 @@ const TimelineCardStandard = ({ item, onClick }) => {
               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 uppercase tracking-wider border border-slate-700">P{item.phase}</span>
               {item.isCore && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-900/80 text-purple-300 uppercase tracking-wider border border-purple-500/50">Core</span>}
             </div>
-            <h3 className="text-lg md:text-xl font-black text-white leading-tight mb-1 group-hover:text-purple-300 transition-colors line-clamp-3 drop-shadow-md">{item.title}</h3>
+            
+            {logoUrl ? (
+              <img src={logoUrl} alt={item.title} className="h-12 object-contain object-left mb-1 drop-shadow-md" />
+            ) : (
+              <h3 className="text-lg md:text-xl font-black text-white leading-tight mb-1 group-hover:text-purple-300 transition-colors line-clamp-3 drop-shadow-md">{item.title}</h3>
+            )}
+            
             <p className="text-xs text-slate-300 font-medium mb-2">{item.saga}</p>
           </div>
           <div className="pt-3 border-t border-slate-700/50 flex flex-col gap-1 text-xs">
@@ -297,31 +329,6 @@ const TimelineCardStandard = ({ item, onClick }) => {
   );
 };
 
-const TimelineCardRoadmap = ({ item, onClick }) => {
-  const { logoUrl } = useTMDBAssets(item.title, item.type, item.id);
-  const cleanTitle = item.title.split(' (')[0];
-
-  return (
-    <div 
-      onClick={() => onClick(item)}
-      className="group cursor-pointer flex flex-col items-center text-center py-2 h-full w-[160px] mx-10 shrink-0 select-none transition-all duration-300 hover:scale-105"
-    >
-      <div className="mb-2 h-[60px] w-full flex items-center justify-center relative">
-        {logoUrl ? (
-            <img 
-              src={logoUrl} 
-              alt={`${cleanTitle} Logo`} 
-              className="max-h-full max-w-[120px] object-contain object-center drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] group-hover:drop-shadow-[0_0_15px_rgba(34,211,238,0.7)] transition-all" 
-            />
-        ) : (
-          <span className="text-lg font-black tracking-widest text-cyan-300 text-center uppercase whitespace-pre-wrap">{cleanTitle}</span>
-        )}
-      </div>
-      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest block group-hover:text-white transition-colors">{formatReleaseMonth(item.releaseDate)}</span>
-    </div>
-  );
-};
-
 export default function MCUTimelineApp() {
   const [selectedItem, setSelectedItem] = useState(null); 
   const [searchQuery, setSearchQuery] = useState('');
@@ -331,8 +338,6 @@ export default function MCUTimelineApp() {
   const [filterType, setFilterType] = useState('All');
   const [filterSaga, setFilterSaga] = useState('All');
   const [filterPhases, setFilterPhases] = useState([1, 2, 3, 4, 5, 6]);
-  
-  const [zoomLevel, setZoomLevel] = useState(1);
 
   const handlePhaseToggle = (phase) => {
     setFilterPhases(prev => prev.includes(phase) ? prev.filter(p => p !== phase) : [...prev, phase]);
@@ -380,10 +385,15 @@ export default function MCUTimelineApp() {
 
         <div className="max-w-7xl mx-auto flex flex-col gap-4">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div>
-              <MCUTitleLogo />
-              <h1 className="hidden text-3xl md:text-5xl font-black text-white leading-none tracking-tighter shrink-0 select-none">
-                MCU <span className="text-transparent font-normal text-3xl md:text-5xl bg-clip-text bg-gradient-to-r from-red-600 via-orange-400 to-red-600">TIMELINE</span>
+            
+            <div className="flex flex-col">
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/1/10/Marvel_Studios_2016_logo.svg" 
+                alt="Marvel Studios" 
+                className="h-6 md:h-8 object-contain object-left filter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] mb-1" 
+              />
+              <h1 className="text-2xl md:text-3xl font-black text-white leading-none tracking-tighter shrink-0 select-none">
+                MCU <span className="text-transparent font-normal bg-clip-text bg-gradient-to-r from-red-600 via-orange-400 to-red-600">TIMELINE</span>
               </h1>
             </div>
 
@@ -446,16 +456,32 @@ export default function MCUTimelineApp() {
       </div>
 
       {/* HORIZONTAL INTERACTIVE CANVAS */}
-      <div className="flex-1 relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 overflow-hidden cursor-grab active:cursor-grabbing">
+      <div className="flex-1 relative overflow-hidden cursor-grab active:cursor-grabbing bg-slate-950">
         
-        {/* CSS Cosmic Space Background */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950 via-slate-950 to-black pointer-events-none"></div>
-        <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+        {/* --- STATIC BACKGROUND STACK --- */}
+        
+        {/* LAYER 1: LOCAL NEBULA BACKGROUND IMAGE */}
+        <div 
+          className="absolute inset-0 z-0 pointer-events-none"
+          style={{
+            backgroundImage: "url('/nebula.jpg')", 
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: 0.15,
+            mixBlendMode: 'lighten'
+          }}
+        ></div>
+
+        {/* LAYER 2: Cosmic Gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/70 via-slate-950/90 to-black pointer-events-none z-10"></div>
+        
+        {/* LAYER 3: Star Dots */}
+        <div className="absolute inset-0 opacity-15 pointer-events-none z-20" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
         {/* TMDB ATTRIBUTION BADGE */}
-        <div className="absolute bottom-6 left-6 z-40 max-w-[250px] text-[10px] text-slate-400 bg-slate-900/90 backdrop-blur-md p-3 rounded-xl border border-slate-700 shadow-2xl pointer-events-auto">
-          <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer" className="flex items-start gap-3 hover:text-slate-200 transition-colors">
-            <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_1-5bdc75aaebeb75dc7ae7942f56fbd8a502d3d241772120b08051726a27e7f7ce.svg" alt="TMDB Logo" className="h-6 mt-0.5" />
+        <div className="absolute bottom-6 left-6 z-40 max-w-[320px] text-xs text-slate-400 bg-slate-900/90 backdrop-blur-md p-4 rounded-xl border border-slate-700 shadow-2xl pointer-events-auto hidden md:block">
+          <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer" className="flex items-center gap-4 hover:text-slate-200 transition-colors">
+            <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB Logo" className="h-4" />
             <p className="leading-tight">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
           </a>
         </div>
@@ -465,7 +491,6 @@ export default function MCUTimelineApp() {
           minScale={0.15}
           maxScale={3}    
           centerOnInit={false}
-          onTransformed={(ref) => setZoomLevel(ref.state.scale)}
           wheel={{ 
             activationKeys: ["Shift"],
             step: 0.1 
@@ -478,14 +503,14 @@ export default function MCUTimelineApp() {
           {({ zoomIn, zoomOut, resetTransform, centerView }) => (
             <>
               {/* Camera Controls */}
-              <div className="absolute bottom-6 right-6 z-40 flex flex-col gap-2 bg-slate-900/90 backdrop-blur-md border border-slate-700 p-2 rounded-2xl shadow-2xl">
+              <div className="absolute bottom-6 right-6 z-40 flex flex-col gap-2 bg-slate-900/90 backdrop-blur-md border border-slate-700 p-2 rounded-2xl shadow-2xl pointer-events-auto">
                 <button onClick={() => zoomIn()} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 hover:text-cyan-400 flex items-center justify-center text-xl font-bold transition-all shadow-md" title="Zoom In">+</button>
                 <button onClick={() => centerView(0.2, 500)} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-xs font-bold transition-all shadow-md text-slate-300" title="Fit to Screen">FIT</button>
                 <button onClick={() => resetTransform()} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-xs font-bold transition-all shadow-md text-slate-400" title="Reset Zoom">100%</button>
                 <button onClick={() => zoomOut()} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 hover:text-purple-400 flex items-center justify-center text-2xl font-bold transition-all shadow-md" title="Zoom Out">−</button>
               </div>
 
-              <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-max !h-full flex items-center pl-20 pr-40">
+              <TransformComponent wrapperClass="!w-full !h-full relative z-30" contentClass="!w-max !h-full flex items-center pl-20 pr-40">
                 <div className="relative flex flex-row items-center h-[750px] gap-x-0">
                   
                   {/* CONTINUOUS RULER GRAPHICS */}
@@ -523,9 +548,7 @@ export default function MCUTimelineApp() {
                           <div className="relative z-10 flex flex-col items-center w-[480px] shrink-0 h-full justify-center">
                             
                             <div className="h-1/2 w-full flex items-end pb-16 px-6">
-                              {index % 2 === 0 && (
-                                zoomLevel < 0.6 ? <TimelineCardRoadmap item={item} onClick={setSelectedItem} /> : <TimelineCardStandard item={item} onClick={setSelectedItem} />
-                              )}
+                              {index % 2 === 0 && <TimelineCardStandard item={item} onClick={setSelectedItem} />}
                             </div>
 
                             <div className="absolute top-1/2 left-1/2 flex flex-col items-center -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
@@ -547,9 +570,7 @@ export default function MCUTimelineApp() {
                             </div>
 
                             <div className="h-1/2 w-full flex items-start pt-16 px-6">
-                              {index % 2 !== 0 && (
-                                zoomLevel < 0.6 ? <TimelineCardRoadmap item={item} onClick={setSelectedItem} /> : <TimelineCardStandard item={item} onClick={setSelectedItem} />
-                              )}
+                              {index % 2 !== 0 && <TimelineCardStandard item={item} onClick={setSelectedItem} />}
                             </div>
                             
                           </div>
