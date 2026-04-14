@@ -75,7 +75,6 @@ const formatReleaseMonth = (dateString) => {
 };
 
 // --- GLOBAL ASSET CACHE & FETCH LOCK ---
-// Prevents TMDB limits by storing images we've already fetched and preventing duplicate concurrent calls
 const tmdbCache = {};
 const activeFetches = {};
 
@@ -92,7 +91,6 @@ const useTMDBAssets = (title, type, id = 0) => {
     }
 
     const fetchAssets = async () => {
-      // If another component is currently fetching this exact movie, wait for it to finish instead of spamming TMDB
       if (activeFetches[title]) {
         const res = await activeFetches[title];
         if (res) setAssets(res);
@@ -109,13 +107,10 @@ const useTMDBAssets = (title, type, id = 0) => {
         return;
       }
 
-      // Create the fetch promise so other components can wait on it
       const fetchPromise = (async () => {
         try {
-          // STAGGER THE REQUESTS: This prevents TMDB from throwing "429 Too Many Requests" when 100 images try to load at once
           await new Promise(resolve => setTimeout(resolve, id * 60));
 
-          // Step 1: Search for the movie/TV show to get the TMDB ID and Poster
           const searchType = type === 'TV Show' ? 'tv' : 'movie';
           const searchUrl = `https://api.themoviedb.org/3/search/${searchType}?api_key=${apiKey}&query=${encodeURIComponent(cleanTitle)}`;
           
@@ -127,7 +122,6 @@ const useTMDBAssets = (title, type, id = 0) => {
             const poster = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : fallbackPoster;
             const tmdbId = result.id;
 
-            // Step 2: Ask TMDB for the images specific to that ID to get the transparent Logo
             const imagesUrl = `https://api.themoviedb.org/3/${searchType}/${tmdbId}/images?api_key=${apiKey}`;
             const imagesRes = await fetch(imagesUrl);
             const imagesData = await imagesRes.json();
@@ -454,8 +448,17 @@ export default function MCUTimelineApp() {
       {/* HORIZONTAL INTERACTIVE CANVAS */}
       <div className="flex-1 relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 overflow-hidden cursor-grab active:cursor-grabbing">
         
+        {/* CSS Cosmic Space Background */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950 via-slate-950 to-black pointer-events-none"></div>
         <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+
+        {/* TMDB ATTRIBUTION BADGE */}
+        <div className="absolute bottom-6 left-6 z-40 max-w-[250px] text-[10px] text-slate-400 bg-slate-900/90 backdrop-blur-md p-3 rounded-xl border border-slate-700 shadow-2xl pointer-events-auto">
+          <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer" className="flex items-start gap-3 hover:text-slate-200 transition-colors">
+            <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_1-5bdc75aaebeb75dc7ae7942f56fbd8a502d3d241772120b08051726a27e7f7ce.svg" alt="TMDB Logo" className="h-6 mt-0.5" />
+            <p className="leading-tight">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+          </a>
+        </div>
 
         <TransformWrapper
           initialScale={1}
@@ -474,6 +477,7 @@ export default function MCUTimelineApp() {
         >
           {({ zoomIn, zoomOut, resetTransform, centerView }) => (
             <>
+              {/* Camera Controls */}
               <div className="absolute bottom-6 right-6 z-40 flex flex-col gap-2 bg-slate-900/90 backdrop-blur-md border border-slate-700 p-2 rounded-2xl shadow-2xl">
                 <button onClick={() => zoomIn()} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 hover:text-cyan-400 flex items-center justify-center text-xl font-bold transition-all shadow-md" title="Zoom In">+</button>
                 <button onClick={() => centerView(0.2, 500)} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-xs font-bold transition-all shadow-md text-slate-300" title="Fit to Screen">FIT</button>
@@ -484,6 +488,7 @@ export default function MCUTimelineApp() {
               <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-max !h-full flex items-center pl-20 pr-40">
                 <div className="relative flex flex-row items-center h-[750px] gap-x-0">
                   
+                  {/* CONTINUOUS RULER GRAPHICS */}
                   <div className="absolute left-0 right-0 top-1/2 h-[3px] bg-slate-700 -translate-y-1/2 rounded-full z-0"></div>
                   <div className="absolute left-0 right-0 top-1/2 h-8 -translate-y-1/2 z-0 opacity-40 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 98px, #cbd5e1 98px, #cbd5e1 100px)', backgroundSize: '100px 100%' }}></div>
                   <div className="absolute left-0 right-0 top-1/2 h-4 -translate-y-1/2 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 18px, #cbd5e1 18px, #cbd5e1 20px)', backgroundSize: '20px 100%' }}></div>
