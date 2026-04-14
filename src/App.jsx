@@ -70,13 +70,19 @@ const getPosterUrl = (title) => {
   return `https://placehold.co/300x450/1e293b/a855f7?text=${encodedTitle}`;
 };
 
-const generateMockTags = (title) => {
-  const words = title.replace(/[:*()]/g, '').split(' ');
-  return words.filter(w => w.length > 3).slice(0, 3).map(w => `#${w}`);
+// Formats full date, e.g. "Jul 22, 2011"
+const formatFullDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+// Formats just the Month and Year for the timeline nodes
+const formatReleaseMonth = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
 };
 
 // --- COMPONENTS ---
-
 const ItemModal = ({ item, onClose }) => {
   useEffect(() => {
     if (item) document.body.style.overflow = 'hidden';
@@ -95,55 +101,31 @@ const ItemModal = ({ item, onClose }) => {
         ${item.isCore ? 'border-purple-500/50 shadow-[0_0_40px_rgba(168,85,247,0.2)]' : 'border-slate-700'}`}
         onClick={(e) => e.stopPropagation()} 
       >
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors z-10"
-        >
-          ✕
-        </button>
-
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors z-10">✕</button>
         <div className="w-full md:w-1/3 shrink-0">
-          <img 
-            src={getPosterUrl(item.title)} 
-            alt={item.title} 
-            className="w-full h-auto rounded-xl shadow-2xl border border-slate-700/50 object-cover aspect-[2/3]"
-          />
+          <img src={getPosterUrl(item.title)} alt={item.title} className="w-full h-auto rounded-xl shadow-2xl border border-slate-700/50 object-cover aspect-[2/3]" />
         </div>
-
         <div className="w-full md:w-2/3 flex flex-col">
           <div className="mb-6">
             <div className="flex flex-wrap gap-2 mb-3">
-              <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider
-                ${item.type === 'Movie' ? 'bg-cyan-900/60 text-cyan-400' : 'bg-emerald-900/60 text-emerald-400'}`}>
-                {item.type}
-              </span>
-              <span className="text-xs font-bold px-2 py-1 rounded bg-slate-700/60 text-slate-300 uppercase tracking-wider">
-                Phase {item.phase}
-              </span>
-              {item.isCore && (
-                <span className="text-xs font-bold px-2 py-1 rounded bg-purple-900/60 text-purple-400 uppercase tracking-wider border border-purple-500/30">
-                  Core Story
-                </span>
-              )}
+              <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${item.type === 'Movie' ? 'bg-cyan-900/60 text-cyan-400' : 'bg-emerald-900/60 text-emerald-400'}`}>{item.type}</span>
+              <span className="text-xs font-bold px-2 py-1 rounded bg-slate-700/60 text-slate-300 uppercase tracking-wider">Phase {item.phase}</span>
+              {item.isCore && <span className="text-xs font-bold px-2 py-1 rounded bg-purple-900/60 text-purple-400 uppercase tracking-wider border border-purple-500/30">Core Story</span>}
             </div>
             <h2 className="text-3xl md:text-5xl font-black text-white mb-2 leading-tight">{item.title}</h2>
             <p className="text-lg text-slate-400 font-medium">{item.saga}</p>
           </div>
-
           <div className="space-y-6">
             <div className="bg-slate-950 rounded-xl p-5 border border-slate-800">
               <h3 className="text-sm uppercase tracking-widest font-bold text-slate-500 mb-2">Fictional Synopsis</h3>
               <p className="text-slate-300 leading-relaxed">
-                In this pivotal installment of the {item.saga}, the events of <strong>{item.title}</strong> shape the future of the Marvel Cinematic Universe. 
-                Set predominantly in the year {item.chronoYear}, this {item.type.toLowerCase()} pushes the boundaries of Phase {item.phase} and leaves lasting consequences 
-                for our heroes as they face new threats across the timeline.
+                In this pivotal installment of the {item.saga}, the events of <strong>{item.title}</strong> shape the future of the Marvel Cinematic Universe. Set predominantly in the year {item.chronoYear}, this {item.type.toLowerCase()} pushes the boundaries of Phase {item.phase} and leaves lasting consequences for our heroes as they face new threats across the timeline.
               </p>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50">
                 <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Theatrical Release</span>
-                <span className="text-slate-200 font-mono text-lg">{item.releaseDate}</span>
+                <span className="text-slate-200 font-mono text-lg">{formatFullDate(item.releaseDate)}</span>
               </div>
               <div className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50">
                 <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Timeline Placement</span>
@@ -165,43 +147,28 @@ const TimelineCard = ({ item, onClick }) => {
       ${item.isCore ? 'border-purple-500 bg-purple-900/40' : 'border-slate-700 bg-slate-800/60'}`}
     >
       <div className="w-1/3 shrink-0">
-         <img 
-            src={getPosterUrl(item.title)} 
-            alt={item.title} 
-            className="w-full h-full rounded-lg shadow-md border border-slate-700/50 object-cover aspect-[2/3] group-hover:opacity-80 transition-opacity"
-         />
+         <img src={getPosterUrl(item.title)} alt={item.title} className="w-full h-full rounded-lg shadow-md border border-slate-700/50 object-cover aspect-[2/3] group-hover:opacity-80 transition-opacity" />
       </div>
-
       <div className="w-2/3 flex flex-col justify-between py-1">
         <div>
           <div className="flex flex-wrap gap-1 mb-2">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider
-              ${item.type === 'Movie' ? 'bg-cyan-900/60 text-cyan-400' : 'bg-emerald-900/60 text-emerald-400'}`}>
-              {item.type}
-            </span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 uppercase tracking-wider">
-              P{item.phase}
-            </span>
-            {item.isCore && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-900/60 text-purple-400 uppercase tracking-wider border border-purple-500/30">
-                Core
-              </span>
-            )}
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${item.type === 'Movie' ? 'bg-cyan-900/60 text-cyan-400' : 'bg-emerald-900/60 text-emerald-400'}`}>{item.type}</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 uppercase tracking-wider">P{item.phase}</span>
+            {item.isCore && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-900/60 text-purple-400 uppercase tracking-wider border border-purple-500/30">Core</span>}
           </div>
-          <h3 className="text-lg md:text-xl font-black text-slate-100 leading-tight mb-1 group-hover:text-purple-300 transition-colors line-clamp-3">
-            {item.title}
-          </h3>
+          <h3 className="text-lg md:text-xl font-black text-slate-100 leading-tight mb-1 group-hover:text-purple-300 transition-colors line-clamp-3">{item.title}</h3>
           <p className="text-xs text-slate-400 font-medium mb-2">{item.saga}</p>
         </div>
-
-        <div className="pt-3 border-t border-slate-700/50 flex justify-between text-xs">
-          <div>
-            <span className="block text-slate-500 text-[10px] uppercase tracking-wider mb-0.5">Release</span>
-            <span className="text-slate-200 font-mono">{item.releaseDate.split('-')[0]}</span>
-          </div>
-          <div className="text-right">
-            <span className="block text-slate-500 text-[10px] uppercase tracking-wider mb-0.5">Timeline</span>
-            <span className="text-cyan-400 font-mono font-bold">{item.chronoYear}</span>
+        <div className="pt-3 border-t border-slate-700/50 flex flex-col gap-1 text-xs">
+          <div className="flex justify-between items-end">
+            <div>
+              <span className="block text-slate-500 text-[10px] uppercase tracking-wider mb-0.5">Release Date</span>
+              <span className="text-slate-200 font-mono text-sm font-semibold">{formatFullDate(item.releaseDate)}</span>
+            </div>
+            <div className="text-right">
+              <span className="block text-slate-500 text-[10px] uppercase tracking-wider mb-0.5">Timeline</span>
+              <span className="text-cyan-400 font-mono font-bold text-sm">{item.chronoYear}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -212,19 +179,15 @@ const TimelineCard = ({ item, onClick }) => {
 export default function MCUTimelineApp() {
   const [selectedItem, setSelectedItem] = useState(null); 
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('releaseDate');
-  const [groupBy, setGroupBy] = useState('None'); 
+  const [sortBy, setSortBy] = useState('chronoYear'); 
+  const [groupBy, setGroupBy] = useState('Phase');    
   const [filterCore, setFilterCore] = useState(false);
   const [filterType, setFilterType] = useState('All');
   const [filterSaga, setFilterSaga] = useState('All');
   const [filterPhases, setFilterPhases] = useState([1, 2, 3, 4, 5, 6]);
 
   const handlePhaseToggle = (phase) => {
-    setFilterPhases(prev => 
-      prev.includes(phase) 
-        ? prev.filter(p => p !== phase) 
-        : [...prev, phase]
-    );
+    setFilterPhases(prev => prev.includes(phase) ? prev.filter(p => p !== phase) : [...prev, phase]);
   };
 
   const processedData = useMemo(() => {
@@ -262,23 +225,21 @@ export default function MCUTimelineApp() {
       <ItemModal item={selectedItem} onClose={() => setSelectedItem(null)} />
 
       {/* FIXED TOP PANEL */}
-      <div className="z-50 shrink-0 bg-slate-900 border-b border-slate-800 p-4 md:p-6 shadow-2xl overflow-y-auto max-h-[50vh]">
+      <div className="z-50 shrink-0 bg-slate-900 border-b border-slate-800 p-4 md:p-6 shadow-2xl overflow-y-auto max-h-[50vh] relative">
+        <div className="absolute top-2 right-4 text-xs font-bold text-slate-500 uppercase tracking-widest hidden lg:block opacity-50">
+          Scroll to Pan • Hold Shift to Zoom
+        </div>
+
         <div className="max-w-7xl mx-auto flex flex-col gap-4">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <h1 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 tracking-tight shrink-0">
-              MCU Database
+              MCU Timeline
             </h1>
             <div className="w-full md:max-w-md relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <svg className="w-5 h-5 text-slate-500 group-focus-within:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
-              <input 
-                type="text" 
-                placeholder="Search..." 
-                className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl py-2 pl-12 pr-4 focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all placeholder-slate-500"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <input type="text" placeholder="Search the Timeline..." className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl py-2 pl-12 pr-4 focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all placeholder-slate-500" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
           </div>
 
@@ -287,13 +248,13 @@ export default function MCUTimelineApp() {
               <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Organize</label>
               <div className="flex gap-2">
                 <select className="bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none flex-1" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                  <option value="releaseDate">By Release</option>
                   <option value="chronoYear">By Timeline</option>
+                  <option value="releaseDate">By Release</option>
                 </select>
                 <select className="bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none flex-1" value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
-                  <option value="None">No Groups</option>
                   <option value="Phase">Group Phase</option>
                   <option value="Saga">Group Saga</option>
+                  <option value="None">No Groups</option>
                 </select>
               </div>
             </div>
@@ -301,16 +262,8 @@ export default function MCUTimelineApp() {
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Format & Saga</label>
               <div className="flex gap-2">
-                <select className="bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none flex-1" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-                  <option value="All">All Formats</option>
-                  <option value="Movie">Movies</option>
-                  <option value="TV Show">TV Shows</option>
-                </select>
-                <select className="bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none flex-1" value={filterSaga} onChange={(e) => setFilterSaga(e.target.value)}>
-                  <option value="All">All Sagas</option>
-                  <option value="Infinity Saga">Infinity Saga</option>
-                  <option value="Multiverse Saga">Multiverse Saga</option>
-                </select>
+                <select className="bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none flex-1" value={filterType} onChange={(e) => setFilterType(e.target.value)}><option value="All">All Formats</option><option value="Movie">Movies</option><option value="TV Show">TV Shows</option></select>
+                <select className="bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none flex-1" value={filterSaga} onChange={(e) => setFilterSaga(e.target.value)}><option value="All">All Sagas</option><option value="Infinity Saga">Infinity Saga</option><option value="Multiverse Saga">Multiverse Saga</option></select>
               </div>
             </div>
 
@@ -321,7 +274,7 @@ export default function MCUTimelineApp() {
                   <div className={`block w-12 h-6 rounded-full transition-colors ${filterCore ? 'bg-purple-600' : 'bg-slate-700'}`}></div>
                   <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${filterCore ? 'translate-x-6' : ''}`}></div>
                 </div>
-                <span className="text-sm font-bold text-slate-300 group-hover:text-white transition-colors">Core Storyline Only</span>
+                <span className="text-sm font-bold text-slate-300 group-hover:text-white transition-colors">Core Story Only</span>
               </label>
             </div>
 
@@ -331,9 +284,7 @@ export default function MCUTimelineApp() {
                 {[1, 2, 3, 4, 5, 6].map(phase => (
                   <label key={phase} className="cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={filterPhases.includes(phase)} onChange={() => handlePhaseToggle(phase)} />
-                    <div className="w-7 h-7 flex items-center justify-center rounded bg-slate-800 border border-slate-700 text-xs font-bold text-slate-400 peer-checked:bg-cyan-900/50 peer-checked:text-cyan-400 peer-checked:border-cyan-500/50 hover:bg-slate-700 transition-all">
-                      {phase}
-                    </div>
+                    <div className="w-7 h-7 flex items-center justify-center rounded bg-slate-800 border border-slate-700 text-xs font-bold text-slate-400 peer-checked:bg-cyan-900/50 peer-checked:text-cyan-400 peer-checked:border-cyan-500/50 hover:bg-slate-700 transition-all">{phase}</div>
                   </label>
                 ))}
               </div>
@@ -350,18 +301,17 @@ export default function MCUTimelineApp() {
           maxScale={3}    
           centerOnInit={false}
           wheel={{ 
-            step: 0.04 
-          }}
-          doubleClick={{ 
-            disabled: true 
+            activationKeys: ["Shift"], // Swapped to Shift to completely bypass the browser Zoom!
+            step: 0.1 
           }}
           panning={{ 
-            wheelPanning: false 
-          }} 
+            wheelPanning: true 
+          }}
+          doubleClick={{ disabled: true }} 
         >
           {({ zoomIn, zoomOut, resetTransform, centerView }) => (
             <>
-              {/* Floating Camera Controls inside Canvas */}
+              {/* Camera Controls inside Canvas */}
               <div className="absolute bottom-6 right-6 z-40 flex flex-col gap-2 bg-slate-900/90 backdrop-blur-md border border-slate-700 p-2 rounded-2xl shadow-2xl">
                 <button onClick={() => zoomIn()} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 hover:text-cyan-400 flex items-center justify-center text-xl font-bold transition-all shadow-md" title="Zoom In">+</button>
                 <button onClick={() => centerView(0.2, 500)} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-xs font-bold transition-all shadow-md text-slate-300" title="Fit to Screen">FIT</button>
@@ -369,15 +319,16 @@ export default function MCUTimelineApp() {
                 <button onClick={() => zoomOut()} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 hover:text-purple-400 flex items-center justify-center text-2xl font-bold transition-all shadow-md" title="Zoom Out">−</button>
               </div>
 
-              {/* The Timeline Object (Horizontal) */}
               <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-max !h-full flex items-center pl-20 pr-40">
-                <div className="relative flex flex-row items-center h-[700px] gap-x-0">
-                  <div className="absolute left-0 right-0 top-1/2 h-2 bg-slate-800 -translate-y-1/2 rounded-full z-0"></div>
+                <div className="relative flex flex-row items-center h-[750px] gap-x-0">
+                  
+                  {/* CONTINUOUS RULER GRAPHICS */}
+                  <div className="absolute left-0 right-0 top-1/2 h-[3px] bg-slate-700 -translate-y-1/2 rounded-full z-0"></div>
+                  <div className="absolute left-0 right-0 top-1/2 h-8 -translate-y-1/2 z-0 opacity-40 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 98px, #cbd5e1 98px, #cbd5e1 100px)', backgroundSize: '100px 100%' }}></div>
+                  <div className="absolute left-0 right-0 top-1/2 h-4 -translate-y-1/2 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 18px, #cbd5e1 18px, #cbd5e1 20px)', backgroundSize: '20px 100%' }}></div>
 
                   {processedData.length === 0 ? (
-                    <div className="text-center w-full px-40 text-slate-500 relative z-10">
-                      <p className="text-xl">No files found matching your search criteria.</p>
-                    </div>
+                    <div className="text-center w-full px-40 text-slate-500 relative z-10"><p className="text-xl">No files found matching your search criteria.</p></div>
                   ) : (
                     processedData.map((item, index) => {
                       let showHeader = false;
@@ -385,15 +336,11 @@ export default function MCUTimelineApp() {
 
                       if (groupBy === 'Phase') {
                         if (item.phase !== currentGroupTracker) {
-                          showHeader = true;
-                          headerText = `Phase ${item.phase}`;
-                          currentGroupTracker = item.phase;
+                          showHeader = true; headerText = `Phase ${item.phase}`; currentGroupTracker = item.phase;
                         }
                       } else if (groupBy === 'Saga') {
                         if (item.saga !== currentGroupTracker) {
-                          showHeader = true;
-                          headerText = item.saga;
-                          currentGroupTracker = item.saga;
+                          showHeader = true; headerText = item.saga; currentGroupTracker = item.saga;
                         }
                       }
 
@@ -402,23 +349,39 @@ export default function MCUTimelineApp() {
                           {showHeader && (
                             <div className="relative z-20 shrink-0 mx-10">
                               <div className="bg-slate-950 border-2 border-purple-500 px-6 py-4 rounded-3xl shadow-[0_0_20px_rgba(168,85,247,0.4)]">
-                                <h2 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 uppercase tracking-widest whitespace-nowrap">
-                                  {headerText}
-                                </h2>
+                                <h2 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 uppercase tracking-widest whitespace-nowrap">{headerText}</h2>
                               </div>
                             </div>
                           )}
 
-                          <div className="relative z-10 flex flex-col items-center w-[450px] shrink-0 h-full justify-center">
-                            <div className="h-1/2 w-full flex items-end pb-12 px-6">
+                          <div className="relative z-10 flex flex-col items-center w-[480px] shrink-0 h-full justify-center">
+                            
+                            <div className="h-1/2 w-full flex items-end pb-16 px-6">
                               {index % 2 === 0 && <TimelineCard item={item} onClick={setSelectedItem} />}
                             </div>
 
-                            <div className="absolute top-1/2 left-1/2 w-6 h-6 rounded-full bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.8)] -translate-x-1/2 -translate-y-1/2 border-4 border-slate-950 z-20 pointer-events-none"></div>
+                            <div className="absolute top-1/2 left-1/2 flex flex-col items-center -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
+                              {index % 2 !== 0 && (
+                                <div className="mb-3 flex flex-col items-center bg-slate-950/80 px-3 py-1 rounded-lg border border-slate-800 backdrop-blur-sm">
+                                  <span className="block text-cyan-400 font-mono text-sm font-black tracking-widest">{item.chronoYear}</span>
+                                  <span className="block text-slate-500 font-mono text-[9px] uppercase tracking-widest">{formatReleaseMonth(item.releaseDate)}</span>
+                                </div>
+                              )}
 
-                            <div className="h-1/2 w-full flex items-start pt-12 px-6">
+                              <div className="w-5 h-5 rounded-full bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.8)] border-[3px] border-slate-950"></div>
+
+                              {index % 2 === 0 && (
+                                <div className="mt-3 flex flex-col items-center bg-slate-950/80 px-3 py-1 rounded-lg border border-slate-800 backdrop-blur-sm">
+                                  <span className="block text-cyan-400 font-mono text-sm font-black tracking-widest">{item.chronoYear}</span>
+                                  <span className="block text-slate-500 font-mono text-[9px] uppercase tracking-widest">{formatReleaseMonth(item.releaseDate)}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="h-1/2 w-full flex items-start pt-16 px-6">
                               {index % 2 !== 0 && <TimelineCard item={item} onClick={setSelectedItem} />}
                             </div>
+                            
                           </div>
                         </React.Fragment>
                       );
