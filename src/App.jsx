@@ -166,22 +166,19 @@ const useTMDBAssets = (title, type, id = 0) => {
 
 // --- COMPONENTS ---
 
+// Custom Local Title Logo Component
 const MCUTitleLogo = () => {
   return (
-    // Uses the highly reliable Marvel Studios SVG to prevent hotlink blocking
-    <div>
+    <div className="flex flex-col items-start select-none">
       <img 
-        src="https://upload.wikimedia.org/wikipedia/commons/1/10/Marvel_Studios_2016_logo.svg" 
-        alt="Marvel Studios" 
-        className="h-8 md:h-12 object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
-        onError={(e) => {
-          e.target.style.display = 'none';
-          e.target.nextSibling.style.display = 'block';
-        }}
+        src="/marvelcinematicuniverse.png" 
+        alt="Marvel Cinematic Universe" 
+        // Re-scaled to properly align with the TIMELINE text below it
+        className="h-12 md:h-16 object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
       />
-      <h1 className="hidden text-3xl md:text-5xl font-black text-white leading-none tracking-tighter shrink-0 select-none">
-        MCU <span className="text-transparent font-normal text-3xl md:text-5xl bg-clip-text bg-gradient-to-r from-red-600 via-orange-400 to-red-600">TIMELINE</span>
-      </h1>
+      <h2 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-orange-400 to-red-600 tracking-[0.2em] uppercase mt-1 pl-1">
+        Timeline
+      </h2>
     </div>
   );
 };
@@ -275,12 +272,13 @@ const TimelineCardStandard = ({ item, onClick }) => {
   return (
     <div 
       onClick={() => onClick(item)}
-      className={`group cursor-pointer relative rounded-xl border backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] h-full w-full overflow-hidden
+      // Updated hover:scale to 1.15 (15% increase) to prevent the card from becoming massive on the screen
+      className={`group cursor-pointer relative rounded-xl border backdrop-blur-sm transition-all duration-500 ease-out hover:scale-[1.15] hover:-translate-y-3 hover:z-[100] hover:shadow-[0_15px_40px_rgba(168,85,247,0.6)] h-full w-full overflow-hidden origin-center
       ${item.isCore ? 'border-purple-500 bg-purple-900/20' : 'border-slate-700 bg-slate-800/40'}`}
     >
       {posterUrl && (
         <div 
-          className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity duration-500 z-0 pointer-events-none"
+          className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500 z-0 pointer-events-none"
           style={{ backgroundImage: `url(${posterUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(10px)' }}
         ></div>
       )}
@@ -289,7 +287,7 @@ const TimelineCardStandard = ({ item, onClick }) => {
       <div className="relative z-10 flex flex-row gap-5 p-4 h-full w-full">
         <div className="w-[40%] shrink-0">
           {posterUrl ? (
-            <img src={posterUrl} alt={item.title} className="w-full h-full rounded-lg shadow-[0_0_15px_rgba(0,0,0,0.4)] border border-slate-700/50 object-cover aspect-[2/3] group-hover:opacity-90 transition-opacity" />
+            <img src={posterUrl} alt={item.title} className="w-full h-full rounded-lg shadow-[0_0_15px_rgba(0,0,0,0.4)] border border-slate-700/50 object-cover aspect-[2/3] group-hover:opacity-100 transition-opacity" />
           ) : (
             <div className="w-full h-full rounded-lg shadow-md border border-slate-700/50 bg-slate-800 animate-pulse aspect-[2/3]"></div>
           )}
@@ -386,16 +384,7 @@ export default function MCUTimelineApp() {
         <div className="max-w-7xl mx-auto flex flex-col gap-4">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             
-            <div className="flex flex-col">
-              <img 
-                src="https://upload.wikimedia.org/wikipedia/commons/1/10/Marvel_Studios_2016_logo.svg" 
-                alt="Marvel Studios" 
-                className="h-6 md:h-8 object-contain object-left filter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] mb-1" 
-              />
-              <h1 className="text-2xl md:text-3xl font-black text-white leading-none tracking-tighter shrink-0 select-none">
-                MCU <span className="text-transparent font-normal bg-clip-text bg-gradient-to-r from-red-600 via-orange-400 to-red-600">TIMELINE</span>
-              </h1>
-            </div>
+            <MCUTitleLogo />
 
             <div className="w-full md:max-w-md relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
