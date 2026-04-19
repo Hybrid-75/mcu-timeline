@@ -78,9 +78,9 @@ const formatReleaseMonth = (dateString) => {
 const tmdbCache = {};
 const activeFetches = {};
 
-// --- CUSTOM HOOK: 3-Step TMDB Fetch (Poster, Logo, Trailer) ---
+// --- CUSTOM HOOK: 3-Step TMDB Fetch (Poster, Logo, Trailer, Synopsis) ---
 const useTMDBAssets = (title, type, id = 0) => {
-  const [assets, setAssets] = useState(tmdbCache[title] || { posterUrl: null, logoUrl: null, trailerUrl: null });
+  const [assets, setAssets] = useState(tmdbCache[title] || { posterUrl: null, logoUrl: null, trailerUrl: null, synopsis: null });
 
   useEffect(() => {
     if (!title) return;
@@ -103,7 +103,7 @@ const useTMDBAssets = (title, type, id = 0) => {
       const fallbackPoster = `https://placehold.co/300x450/1e293b/a855f7?text=${encodeURIComponent(shortTitle)}`;
 
       if (!apiKey) {
-        setAssets({ posterUrl: fallbackPoster, logoUrl: null, trailerUrl: null });
+        setAssets({ posterUrl: fallbackPoster, logoUrl: null, trailerUrl: null, synopsis: null });
         return;
       }
 
@@ -141,13 +141,16 @@ const useTMDBAssets = (title, type, id = 0) => {
               }
             }
 
-            return { posterUrl: poster, logoUrl: logo, trailerUrl: trailer };
+            // We grab the "overview" property straight from TMDB here!
+            let synopsis = detailData.overview || null;
+
+            return { posterUrl: poster, logoUrl: logo, trailerUrl: trailer, synopsis: synopsis };
           } else {
-            return { posterUrl: fallbackPoster, logoUrl: null, trailerUrl: null };
+            return { posterUrl: fallbackPoster, logoUrl: null, trailerUrl: null, synopsis: null };
           }
         } catch (error) {
           console.error("TMDB Fetch Failed:", error);
-          return { posterUrl: fallbackPoster, logoUrl: null, trailerUrl: null };
+          return { posterUrl: fallbackPoster, logoUrl: null, trailerUrl: null, synopsis: null };
         }
       })();
 
@@ -166,14 +169,12 @@ const useTMDBAssets = (title, type, id = 0) => {
 
 // --- COMPONENTS ---
 
-// Custom Local Title Logo Component
 const MCUTitleLogo = () => {
   return (
     <div className="flex flex-col items-start select-none">
       <img 
         src="/marvelcinematicuniverse.png" 
         alt="Marvel Cinematic Universe" 
-        // Re-scaled to properly align with the TIMELINE text below it
         className="h-12 md:h-16 object-contain filter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
       />
       <h2 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-orange-400 to-red-600 tracking-[0.2em] uppercase mt-1 pl-1">
@@ -184,7 +185,7 @@ const MCUTitleLogo = () => {
 };
 
 const ItemModal = ({ item, onClose }) => {
-  const { posterUrl, logoUrl, trailerUrl } = useTMDBAssets(item?.title, item?.type, item?.id);
+  const { posterUrl, logoUrl, trailerUrl, synopsis } = useTMDBAssets(item?.title, item?.type, item?.id);
 
   useEffect(() => {
     if (item) document.body.style.overflow = 'hidden';
@@ -243,9 +244,10 @@ const ItemModal = ({ item, onClose }) => {
             </div>
             <div className="space-y-6">
               <div className="bg-slate-950/60 backdrop-blur-sm rounded-xl p-5 border border-slate-800/50">
-                <h3 className="text-sm uppercase tracking-widest font-bold text-slate-400 mb-2">Fictional Synopsis</h3>
+                <h3 className="text-sm uppercase tracking-widest font-bold text-slate-400 mb-2">Synopsis</h3>
                 <p className="text-slate-200 leading-relaxed">
-                  Experience the events of <strong>{item.title}</strong> as they unfold within the {item.saga}. Set predominantly in the year {item.chronoYear}, this {item.type.toLowerCase()} pushes the boundaries of Phase {item.phase} and leaves lasting consequences across the timeline.
+                  {/* Dynamic Synopsis Injected Here! */}
+                  {synopsis ? synopsis : `Experience the events of ${item.title} as they unfold within the ${item.saga}. Set predominantly in the year ${item.chronoYear}, this ${item.type.toLowerCase()} pushes the boundaries of Phase ${item.phase} and leaves lasting consequences across the timeline.`}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -272,7 +274,6 @@ const TimelineCardStandard = ({ item, onClick }) => {
   return (
     <div 
       onClick={() => onClick(item)}
-      // Updated hover:scale to 1.15 (15% increase) to prevent the card from becoming massive on the screen
       className={`group cursor-pointer relative rounded-xl border backdrop-blur-sm transition-all duration-500 ease-out hover:scale-[1.15] hover:-translate-y-3 hover:z-[100] hover:shadow-[0_15px_40px_rgba(168,85,247,0.6)] h-full w-full overflow-hidden origin-center
       ${item.isCore ? 'border-purple-500 bg-purple-900/20' : 'border-slate-700 bg-slate-800/40'}`}
     >
@@ -448,8 +449,6 @@ export default function MCUTimelineApp() {
       <div className="flex-1 relative overflow-hidden cursor-grab active:cursor-grabbing bg-slate-950">
         
         {/* --- STATIC BACKGROUND STACK --- */}
-        
-        {/* LAYER 1: LOCAL NEBULA BACKGROUND IMAGE */}
         <div 
           className="absolute inset-0 z-0 pointer-events-none"
           style={{
@@ -461,13 +460,9 @@ export default function MCUTimelineApp() {
           }}
         ></div>
 
-        {/* LAYER 2: Cosmic Gradient */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/70 via-slate-950/90 to-black pointer-events-none z-10"></div>
-        
-        {/* LAYER 3: Star Dots */}
         <div className="absolute inset-0 opacity-15 pointer-events-none z-20" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
-        {/* TMDB ATTRIBUTION BADGE */}
         <div className="absolute bottom-6 left-6 z-40 max-w-[320px] text-xs text-slate-400 bg-slate-900/90 backdrop-blur-md p-4 rounded-xl border border-slate-700 shadow-2xl pointer-events-auto hidden md:block">
           <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer" className="flex items-center gap-4 hover:text-slate-200 transition-colors">
             <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB Logo" className="h-4" />
@@ -502,7 +497,6 @@ export default function MCUTimelineApp() {
               <TransformComponent wrapperClass="!w-full !h-full relative z-30" contentClass="!w-max !h-full flex items-center pl-20 pr-40">
                 <div className="relative flex flex-row items-center h-[750px] gap-x-0">
                   
-                  {/* CONTINUOUS RULER GRAPHICS */}
                   <div className="absolute left-0 right-0 top-1/2 h-[3px] bg-slate-700 -translate-y-1/2 rounded-full z-0"></div>
                   <div className="absolute left-0 right-0 top-1/2 h-8 -translate-y-1/2 z-0 opacity-40 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 98px, #cbd5e1 98px, #cbd5e1 100px)', backgroundSize: '100px 100%' }}></div>
                   <div className="absolute left-0 right-0 top-1/2 h-4 -translate-y-1/2 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 18px, #cbd5e1 18px, #cbd5e1 20px)', backgroundSize: '20px 100%' }}></div>
