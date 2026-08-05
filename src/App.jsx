@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { Analytics } from '@vercel/analytics/react';
 
 // --- DATASET (Clean, no hardcoded image paths) ---
 const mcuData = [
@@ -567,6 +568,7 @@ export default function MCUTimelineApp() {
           )}
         </TransformWrapper>
       </div>
+      <Analytics />
     </div>
   );
 }
